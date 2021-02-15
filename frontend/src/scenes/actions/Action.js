@@ -15,16 +15,9 @@ let actionLogic = kea({
     key: (props) => props.id || 'new',
     actions: () => ({
         checkIsFinished: (action) => ({ action }),
-        setPollTimeout: (pollTimeout) => ({ pollTimeout }),
         setIsComplete: (isComplete) => ({ isComplete }),
     }),
     reducers: () => ({
-        pollTimeout: [
-            null,
-            {
-                setPollTimeout: (_, { pollTimeout }) => pollTimeout,
-            },
-        ],
         isComplete: [
             false,
             {
@@ -42,25 +35,23 @@ let actionLogic = kea({
             },
         },
     }),
-    listeners: ({ actions, props, values }) => ({
-        checkIsFinished: ({ action }) => {
+    listeners: ({ actions, props }) => ({
+        checkIsFinished: async ({ action }, breakpoint) => {
+            breakpoint()
             if (action.is_calculating) {
-                actions.setPollTimeout(setTimeout(() => actions.loadAction(), 1000))
+                await breakpoint(1000)
+                actions.loadAction()
             } else {
                 props.onComplete()
                 actions.setIsComplete(new Date())
-                clearTimeout(values.pollTimeout)
             }
         },
     }),
-    events: ({ values, actions, props }) => ({
+    events: ({ actions, props }) => ({
         afterMount: async () => {
             if (props.id) {
                 actions.loadAction()
             }
-        },
-        beforeUnmount: () => {
-            clearTimeout(values.pollTimeout)
         },
     }),
 })

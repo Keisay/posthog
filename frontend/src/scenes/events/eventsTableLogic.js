@@ -55,7 +55,6 @@ export const eventsTableLogic = kea({
         pollEventsSuccess: (events) => ({ events }),
         prependNewEvents: (events) => ({ events }),
         setSelectedEvent: (selectedEvent) => ({ selectedEvent }),
-        setPollTimeout: (pollTimeout) => ({ pollTimeout }),
         setDelayedLoading: true,
         setEventFilter: (event) => ({ event }),
     }),
@@ -134,12 +133,6 @@ export const eventsTableLogic = kea({
                 },
             },
         ],
-        pollTimeout: [
-            null,
-            {
-                setPollTimeout: (_, { pollTimeout }) => pollTimeout,
-            },
-        ],
     }),
 
     selectors: ({ selectors, props }) => ({
@@ -157,13 +150,6 @@ export const eventsTableLogic = kea({
             () => [selectors.events, selectors.newEvents],
             (events, newEvents) => formatEvents(events, newEvents, props.apiUrl),
         ],
-    }),
-
-    events: ({ values }) => ({
-        // No afterMount necessary because actionToUrl will call
-        beforeUnmount: () => {
-            clearTimeout(values.pollTimeout)
-        },
     }),
 
     actionToUrl: ({ values }) => ({
@@ -215,8 +201,6 @@ export const eventsTableLogic = kea({
                 }
             },
             async ({ nextParams }, breakpoint) => {
-                clearTimeout(values.pollTimeout)
-
                 const urlParams = toParams({
                     properties: values.properties,
                     ...(props.fixedFilters || {}),
@@ -229,7 +213,8 @@ export const eventsTableLogic = kea({
                 breakpoint()
                 actions.fetchEventsSuccess(events.results, events.next, !!nextParams)
 
-                actions.setPollTimeout(setTimeout(actions.pollEvents, POLL_TIMEOUT))
+                await breakpoint(POLL_TIMEOUT)
+                actions.pollEvents()
             },
         ],
         pollEvents: async (_, breakpoint) => {
@@ -260,7 +245,8 @@ export const eventsTableLogic = kea({
                 actions.pollEventsSuccess(events.results)
             }
 
-            actions.setPollTimeout(setTimeout(actions.pollEvents, POLL_TIMEOUT))
+            await breakpoint(POLL_TIMEOUT)
+            actions.pollEvents()
         },
     }),
 })

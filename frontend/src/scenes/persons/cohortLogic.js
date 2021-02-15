@@ -15,17 +15,10 @@ export const cohortLogic = kea({
         setCohort: (cohort) => ({ cohort }),
         checkIsFinished: (cohort) => ({ cohort }),
         setToastId: (toastId) => ({ toastId }),
-        setPollTimeout: (pollTimeout) => ({ pollTimeout }),
         setLastSavedAt: (lastSavedAt) => ({ lastSavedAt }),
     }),
 
     reducers: ({ props }) => ({
-        pollTimeout: [
-            null,
-            {
-                setPollTimeout: (_, { pollTimeout }) => pollTimeout,
-            },
-        ],
         cohort: [
             props.cohort,
             {
@@ -82,7 +75,7 @@ export const cohortLogic = kea({
     }),
 
     sharedListeners: ({ actions, values }) => ({
-        pollIsFinished: (cohort) => {
+        pollIsFinished: async (cohort, breakpoint) => {
             if (cohort.is_calculating) {
                 if (!values.toastId) {
                     actions.setToastId(
@@ -96,7 +89,8 @@ export const cohortLogic = kea({
                         )
                     )
                 }
-                actions.setPollTimeout(setTimeout(() => actions.checkIsFinished(cohort), 1000))
+                await breakpoint(1000)
+                actions.checkIsFinished(cohort)
             } else {
                 toast.update(values.toastId, {
                     render: function RenderToast() {
@@ -112,14 +106,11 @@ export const cohortLogic = kea({
         },
     }),
 
-    events: ({ values, actions, props }) => ({
+    events: ({ actions, props }) => ({
         afterMount: async () => {
             if (!props.cohort.id) {
                 actions.setCohort({ groups: router.values.location.pathname.indexOf('cohorts/new') > -1 ? [{}] : [] })
             }
-        },
-        beforeUnmount: () => {
-            clearTimeout(values.pollTimeout)
         },
     }),
 })
